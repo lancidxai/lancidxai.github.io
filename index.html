@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>WorkLog</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+:root {
+  --bg:      #0f1117;
+  --bg2:     #171b24;
+  --bg3:     #1e2330;
+  --border:  rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.13);
+  --text:    #e8eaf0;
+  --text2:   #8b90a0;
+  --text3:   #555a6a;
+  --accent:  #4f8cff;
+  --done-color: #22c55e;
+  --done-bg:    rgba(34,197,94,0.13);
+  --radius:  8px;
+
+  --c0:#4f8cff; --c0bg:rgba(79,140,255,0.13);
+  --c1:#f97316; --c1bg:rgba(249,115,22,0.13);
+  --c2:#a78bfa; --c2bg:rgba(167,139,250,0.13);
+  --c3:#06b6d4; --c3bg:rgba(6,182,212,0.13);
+  --c4:#eab308; --c4bg:rgba(234,179,8,0.13);
+  --c5:#f43f5e; --c5bg:rgba(244,63,94,0.13);
+  --c6:#ec4899; --c6bg:rgba(236,72,153,0.13);
+  --c7:#888780; --c7bg:rgba(136,135,128,0.13);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'IBM Plex Sans KR',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+
+/* TOPBAR */
+.topbar{height:52px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:16px;flex-shrink:0;z-index:100;}
+.logo{font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:500;letter-spacing:-.3px;white-space:nowrap;}
+.logo span{color:var(--accent);}
+.search-wrap{flex:1;max-width:480px;position:relative;}
+.search-wrap input{width:100%;height:32px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-family:'IBM Plex Sans KR',sans-serif;font-size:13px;padding:0 12px 0 34px;outline:none;transition:border-color .15s;}
+.search-wrap input:focus{border-color:var(--accent);}
+.search-wrap input::placeholder{color:var(--text3);}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);pointer-events:none;}
+.new-btn{height:32px;padding:0 14px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);font-family:'IBM Plex Sans KR',sans-serif;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:opacity .15s;display:flex;align-items:center;gap:6px;}
+.new-btn:hover{opacity:.85;}
+
+/* SEARCH BANNER */
+.search-banner{display:none;padding:8px 16px;background:rgba(79,140,255,.08);border-bottom:1px solid var(--border);font-size:12px;color:var(--text2);align-items:center;gap:8px;flex-shrink:0;}
+.search-banner.visible{display:flex;}
+.clear-search{color:var(--accent);cursor:pointer;margin-left:auto;font-size:12px;}
+.clear-search:hover{text-decoration:underline;}
+
+/* LAYOUT */
+.main{flex:1;display:flex;overflow:hidden;}
+
+/* SIDEBAR */
+.sidebar{width:196px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;}
+.sidebar-head{padding:12px 14px 8px;font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.8px;text-transform:uppercase;flex-shrink:0;}
+.date-list{flex:1;overflow-y:auto;padding-bottom:8px;}
+.date-list::-webkit-scrollbar{width:3px;}
+.date-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+.date-item{padding:8px 14px;cursor:pointer;border-left:2px solid transparent;transition:background .1s,border-color .1s;}
+.date-item:hover{background:var(--bg3);}
+.date-item.active{background:var(--bg3);border-left-color:var(--accent);}
+.date-item .d-label{font-size:13px;font-weight:500;color:var(--text);display:block;}
+.date-item .d-sub{font-size:11px;color:var(--text3);margin-top:1px;display:block;}
+.date-item .d-count{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;background:var(--bg);border-radius:4px;font-size:10px;color:var(--text2);float:right;margin-top:1px;}
+
+/* CARD AREA */
+.card-area{width:300px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+.card-area-head{padding:12px 14px 10px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;}
+.card-area-title{font-size:13px;font-weight:600;color:var(--text);}
+.card-area-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+.add-card-btn{height:26px;padding:0 10px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text2);font-size:12px;cursor:pointer;font-family:'IBM Plex Sans KR',sans-serif;display:flex;align-items:center;gap:4px;white-space:nowrap;transition:border-color .15s,color .15s;}
+.add-card-btn:hover{border-color:var(--accent);color:var(--accent);}
+.card-list{flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:6px;}
+.card-list::-webkit-scrollbar{width:3px;}
+.card-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+
+.work-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;cursor:pointer;transition:border-color .15s,background .1s;border-left:3px solid transparent;}
+.work-card:hover{background:var(--bg3);}
+.work-card.active{border-color:var(--border2);background:var(--bg3);}
+.work-card.done-card{opacity:.55;}
+
+.cat-row{display:flex;align-items:center;gap:5px;margin-bottom:5px;flex-wrap:wrap;}
+.cat-badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;letter-spacing:.3px;flex-shrink:0;}
+.done-badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;background:var(--done-bg);color:var(--done-color);letter-spacing:.3px;flex-shrink:0;}
+.card-time{font-size:10px;color:var(--text3);font-family:'IBM Plex Mono',monospace;margin-left:auto;}
+.card-title{font-size:13px;font-weight:500;color:var(--text);margin-bottom:5px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.card-title.done-title{text-decoration:line-through;color:var(--text3);}
+.card-preview{font-size:11px;color:var(--text3);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.card-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:7px;}
+.tag{font-size:10px;color:var(--text3);background:var(--bg);border:1px solid var(--border2);border-radius:3px;padding:1px 6px;font-family:'IBM Plex Mono',monospace;}
+.tag.date-tag{color:var(--accent);border-color:rgba(79,140,255,.25);}
+.tag.plm-tag{color:#f97316;border-color:rgba(249,115,22,.3);}
+.tag.basic-tag{color:#a78bfa;border-color:rgba(167,139,250,.3);}
+
+/* DETAIL */
+.detail{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+.detail-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text3);gap:8px;}
+.detail-empty svg{opacity:.25;}
+.detail-empty p{font-size:13px;}
+.detail-head{padding:14px 20px 12px;border-bottom:1px solid var(--border);flex-shrink:0;display:none;}
+.detail-head.visible{display:block;}
+.detail-cat-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;}
+.detail-title{font-size:20px;font-weight:600;color:var(--text);line-height:1.3;}
+.detail-title.done-title{text-decoration:line-through;color:var(--text2);}
+.detail-meta{font-size:11px;color:var(--text3);margin-top:6px;font-family:'IBM Plex Mono',monospace;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.detail-actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
+.action-btn{height:28px;padding:0 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text2);font-size:12px;cursor:pointer;font-family:'IBM Plex Sans KR',sans-serif;display:flex;align-items:center;gap:5px;transition:border-color .15s,color .15s;}
+.action-btn:hover{color:var(--text);}
+.action-btn.danger:hover{border-color:#f43f5e;color:#f43f5e;}
+.action-btn.done-btn:hover{border-color:var(--done-color);color:var(--done-color);}
+.action-btn.done-active{border-color:var(--done-color);color:var(--done-color);background:var(--done-bg);}
+.detail-body{flex:1;overflow-y:auto;padding:20px;display:none;}
+.detail-body.visible{display:block;}
+.detail-body::-webkit-scrollbar{width:3px;}
+.detail-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+
+/* MARKDOWN */
+.md-content h1,.md-content h2,.md-content h3,.md-content h4{color:var(--text);font-weight:600;margin:1.2em 0 .5em;line-height:1.3;}
+.md-content h1{font-size:18px;}
+.md-content h2{font-size:16px;border-bottom:1px solid var(--border);padding-bottom:6px;}
+.md-content h3{font-size:14px;}
+.md-content p{font-size:14px;color:var(--text2);line-height:1.75;margin-bottom:.75em;}
+.md-content ul,.md-content ol{padding-left:20px;margin-bottom:.75em;}
+.md-content li{font-size:14px;color:var(--text2);line-height:1.7;}
+.md-content code{font-family:'IBM Plex Mono',monospace;font-size:12px;background:var(--bg3);border:1px solid var(--border2);padding:1px 5px;border-radius:4px;color:var(--accent);}
+.md-content pre{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:.75em;overflow-x:auto;}
+.md-content pre code{background:none;border:none;padding:0;font-size:12px;color:var(--text2);}
+.md-content blockquote{border-left:3px solid var(--accent);padding-left:12px;color:var(--text3);margin-bottom:.75em;}
+.md-content a{color:var(--accent);text-decoration:none;}
+.md-content a:hover{text-decoration:underline;}
+.md-content strong{color:var(--text);font-weight:600;}
+.md-content hr{border:none;border-top:1px solid var(--border);margin:1em 0;}
+.md-content table{width:100%;border-collapse:collapse;margin-bottom:.75em;font-size:13px;}
+.md-content th{background:var(--bg3);color:var(--text);padding:7px 10px;text-align:left;border:1px solid var(--border2);}
+.md-content td{padding:6px 10px;border:1px solid var(--border);color:var(--text2);}
+
+/* LINKED */
+.linked-section{margin-top:24px;padding-top:16px;border-top:1px solid var(--border);}
+.linked-label{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.7px;text-transform:uppercase;margin-bottom:8px;}
+.linked-list{display:flex;flex-direction:column;gap:5px;}
+.linked-card{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;cursor:pointer;transition:border-color .15s;font-size:12px;color:var(--text2);}
+.linked-card:hover{border-color:var(--border2);color:var(--text);}
+.linked-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+
+/* MODAL */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:200;align-items:center;justify-content:center;}
+.overlay.open{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;width:660px;max-width:calc(100vw - 32px);max-height:92vh;display:flex;flex-direction:column;overflow:hidden;}
+.modal-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.modal-title{font-size:15px;font-weight:600;color:var(--text);}
+.modal-close{width:28px;height:28px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:color .15s;}
+.modal-close:hover{color:var(--text);}
+.modal-body{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:14px;}
+.modal-body::-webkit-scrollbar{width:3px;}
+.modal-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+.modal-foot{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-shrink:0;}
+
+.field-label{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.6px;text-transform:uppercase;margin-bottom:5px;}
+.field-input{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-family:'IBM Plex Sans KR',sans-serif;font-size:14px;padding:8px 12px;outline:none;transition:border-color .15s;}
+.field-input:focus{border-color:var(--accent);}
+textarea.field-input{resize:vertical;min-height:180px;font-family:'IBM Plex Mono',monospace;font-size:13px;line-height:1.6;}
+
+.cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+.cat-opt{padding:8px 6px;border-radius:6px;border:1.5px solid var(--border);cursor:pointer;font-size:11px;font-weight:500;text-align:center;transition:border-color .12s,background .12s;color:var(--text2);}
+.cat-opt:hover{border-color:var(--border2);color:var(--text);}
+.cat-opt.selected{color:#fff;}
+
+/* TAG SELECTOR */
+.tag-selector{display:flex;flex-direction:column;gap:8px;}
+.preset-tags{display:flex;gap:6px;}
+.preset-tag-btn{height:28px;padding:0 14px;border-radius:999px;border:1px solid var(--border2);background:transparent;color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;font-family:'IBM Plex Sans KR',sans-serif;transition:all .12s;}
+.preset-tag-btn:hover{color:var(--text);}
+.preset-tag-btn.plm-sel{background:rgba(249,115,22,.15);border-color:rgba(249,115,22,.5);color:#f97316;}
+.preset-tag-btn.basic-sel{background:rgba(167,139,250,.15);border-color:rgba(167,139,250,.5);color:#a78bfa;}
+.tag-input-row{display:flex;gap:6px;}
+.tag-input-row input{flex:1;}
+.tag-add-btn{height:38px;padding:0 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text2);font-size:13px;cursor:pointer;font-family:'IBM Plex Sans KR',sans-serif;white-space:nowrap;transition:border-color .15s,color .15s;}
+.tag-add-btn:hover{border-color:var(--accent);color:var(--accent);}
+.custom-tags{display:flex;flex-wrap:wrap;gap:5px;min-height:4px;}
+.custom-tag-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:var(--bg3);border:1px solid var(--border2);border-radius:4px;font-size:11px;color:var(--text2);font-family:'IBM Plex Mono',monospace;}
+.chip-del{cursor:pointer;color:var(--text3);font-size:12px;line-height:1;margin-left:2px;}
+.chip-del:hover{color:#f43f5e;}
+
+.link-list-modal{display:flex;flex-direction:column;gap:4px;max-height:160px;overflow-y:auto;}
+.link-list-modal::-webkit-scrollbar{width:3px;}
+.link-opt{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;color:var(--text2);transition:border-color .12s;}
+.link-opt:hover{border-color:var(--border2);}
+.link-opt.selected{border-color:var(--accent);color:var(--text);}
+.link-opt input[type=checkbox]{accent-color:var(--accent);}
+
+.btn-save{height:34px;padding:0 20px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);font-family:'IBM Plex Sans KR',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:opacity .15s;}
+.btn-save:hover{opacity:.85;}
+.btn-cancel{height:34px;padding:0 16px;background:var(--bg3);color:var(--text2);border:1px solid var(--border2);border-radius:var(--radius);font-family:'IBM Plex Sans KR',sans-serif;font-size:13px;cursor:pointer;transition:color .15s;}
+.btn-cancel:hover{color:var(--text);}
+.empty-cards{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text3);font-size:13px;gap:8px;padding:20px;text-align:center;}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo">Work<span>Log</span></div>
+  <div class="search-wrap">
+    <svg class="search-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+      <circle cx="6.5" cy="6.5" r="4.5"/><line x1="10.5" y1="10.5" x2="14" y2="14"/>
+    </svg>
+    <input type="text" id="searchInput" placeholder="제목, 태그, 내용 검색..."/>
+  </div>
+  <button class="new-btn" onclick="openNewCard()">
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+      <line x1="8" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="14" y2="8"/>
+    </svg>
+    새 업무
+  </button>
+</div>
+
+<!-- SEARCH BANNER -->
+<div class="search-banner" id="searchBanner">
+  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+    <circle cx="6.5" cy="6.5" r="4.5"/><line x1="10.5" y1="10.5" x2="14" y2="14"/>
+  </svg>
+  <span id="searchInfo"></span>
+  <span class="clear-search" onclick="clearSearch()">검색 지우기</span>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-head">날짜</div>
+    <div class="date-list" id="dateList"></div>
+  </div>
+
+  <!-- CARD LIST -->
+  <div class="card-area">
+    <div class="card-area-head">
+      <div>
+        <div class="card-area-title" id="cardAreaTitle">날짜를 선택하세요</div>
+        <div class="card-area-sub" id="cardAreaSub"></div>
+      </div>
+      <button class="add-card-btn" onclick="openNewCard()">
+        <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <line x1="8" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="14" y2="8"/>
+        </svg>
+        추가
+      </button>
+    </div>
+    <div class="card-list" id="cardList">
+      <div class="empty-cards">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="13" y2="13"/>
+        </svg>
+        왼쪽에서 날짜를 선택하세요
+      </div>
+    </div>
+  </div>
+
+  <!-- DETAIL -->
+  <div class="detail">
+    <div class="detail-empty" id="detailEmpty">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+      </svg>
+      <p>업무 카드를 선택하면 세부 내용이 표시됩니다</p>
+    </div>
+    <div class="detail-head" id="detailHead">
+      <div class="detail-cat-row">
+        <span class="cat-badge" id="detailCatBadge"></span>
+        <span class="done-badge" id="detailDoneBadge" style="display:none">✓ 완료</span>
+        <span style="font-size:11px;color:var(--text3);font-family:'IBM Plex Mono',monospace;" id="detailSession"></span>
+      </div>
+      <div class="detail-title" id="detailTitle"></div>
+      <div class="detail-meta" id="detailMeta"></div>
+      <div class="detail-actions">
+        <button class="action-btn done-btn" id="doneToggleBtn" onclick="toggleDone()">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <polyline points="2,9 6,13 14,4"/>
+          </svg>
+          완료
+        </button>
+        <button class="action-btn" onclick="editCurrent()">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <path d="M11.5 2.5l2 2L5 13H3v-2L11.5 2.5z"/>
+          </svg>
+          수정
+        </button>
+        <button class="action-btn danger" onclick="deleteCurrent()">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <polyline points="3,4 13,4"/><path d="M5 4V2h6v2M4 4l.5 9h7l.5-9"/>
+            <line x1="6" y1="7" x2="6" y2="11"/><line x1="10" y1="7" x2="10" y2="11"/>
+          </svg>
+          삭제
+        </button>
+      </div>
+    </div>
+    <div class="detail-body" id="detailBody">
+      <div class="md-content" id="mdContent"></div>
+      <div id="linkedSection"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="modalTitle">새 업무 추가</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div>
+        <div class="field-label">카테고리</div>
+        <div class="cat-grid" id="catGrid"></div>
+      </div>
+      <div>
+        <div class="field-label">제목</div>
+        <input type="text" class="field-input" id="fieldTitle" placeholder="업무 제목 입력..."/>
+      </div>
+      <div>
+        <div class="field-label">세부 내용 (Markdown)</div>
+        <textarea class="field-input" id="fieldContent" placeholder="## 내용&#10;마크다운 형식으로 작성하세요.&#10;&#10;- 항목 1&#10;- 항목 2"></textarea>
+      </div>
+      <div>
+        <div class="field-label">태그</div>
+        <div class="tag-selector">
+          <div class="preset-tags">
+            <button class="preset-tag-btn" id="btnPLM" onclick="togglePresetTag('PLM')">PLM</button>
+            <button class="preset-tag-btn" id="btnBASIC" onclick="togglePresetTag('BASIC')">BASIC</button>
+          </div>
+          <div class="tag-input-row">
+            <input type="text" class="field-input" id="fieldCustomTag" placeholder="태그 직접 입력 후 추가 (Enter)..."
+              onkeydown="if(event.key==='Enter'){addCustomTag();event.preventDefault();}"/>
+            <button class="tag-add-btn" onclick="addCustomTag()">+ 추가</button>
+          </div>
+          <div class="custom-tags" id="customTagsWrap"></div>
+        </div>
+      </div>
+      <div>
+        <div class="field-label">세션 이름 (선택)</div>
+        <input type="text" class="field-input" id="fieldSession" placeholder="예: 오전세션, 스프린트1, 야근..."/>
+      </div>
+      <div>
+        <div class="field-label">다른 업무 연결</div>
+        <div class="link-list-modal" id="linkListModal"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-cancel" onclick="closeModal()">취소</button>
+      <button class="btn-save" onclick="saveCard()">저장</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const CATS=[
+  {id:0,name:'Browser', color:'var(--c0)',bg:'var(--c0bg)'},
+  {id:1,name:'Calendar',color:'var(--c1)',bg:'var(--c1bg)'},
+  {id:2,name:'Members', color:'var(--c2)',bg:'var(--c2bg)'},
+  {id:3,name:'Cloud',   color:'var(--c3)',bg:'var(--c3bg)'},
+  {id:4,name:'Compass', color:'var(--c4)',bg:'var(--c4bg)'},
+  {id:5,name:'Account', color:'var(--c5)',bg:'var(--c5bg)'},
+  {id:6,name:'Find',    color:'var(--c6)',bg:'var(--c6bg)'},
+  {id:7,name:'Etc',     color:'var(--c7)',bg:'var(--c7bg)'},
+];
+
+let db=JSON.parse(localStorage.getItem('worklog_v2')||'[]');
+let selectedDate=null,selectedCardId=null,editingId=null;
+let modalSelCat=0,modalSelLinks=[],modalPresetTags=[],modalCustomTags=[];
+let searchQuery='';
+
+function save(){localStorage.setItem('worklog_v2',JSON.stringify(db));}
+function todayStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function nowTimeStr(){const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
+function formatDateLabel(ds){
+  const[y,m,d]=ds.split('-');
+  const days=['일','월','화','수','목','금','토'];
+  const dt=new Date(+y,+m-1,+d);
+  return(ds===todayStr()?'오늘 · ':'')+m+'/'+d+' ('+days[dt.getDay()]+')';
+}
+
+/* SEARCH */
+function getResults(){
+  if(!searchQuery) return db;
+  const q=searchQuery.toLowerCase();
+  return db.filter(c=>c.title.toLowerCase().includes(q)||(c.content||'').toLowerCase().includes(q)||(c.tags||[]).some(t=>t.toLowerCase().includes(q))||(c.sessionName||'').toLowerCase().includes(q));
+}
+function hl(text){
+  if(!searchQuery||!text) return text||'';
+  const re=new RegExp('('+searchQuery.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
+  return String(text).replace(re,'<mark style="background:rgba(79,140,255,.3);color:var(--text);border-radius:2px;">$1</mark>');
+}
+document.getElementById('searchInput').addEventListener('input',function(){
+  searchQuery=this.value.trim();
+  const banner=document.getElementById('searchBanner');
+  if(searchQuery){
+    const r=getResults();
+    document.getElementById('searchInfo').textContent='"'+searchQuery+'" 검색결과: '+r.length+'개';
+    banner.classList.add('visible');
+    selectedCardId=null;
+    const dates=[...new Set(r.map(c=>c.date))].sort((a,b)=>b.localeCompare(a));
+    selectedDate=dates[0]||null;
+  } else {
+    banner.classList.remove('visible');
+    const dates=[...new Set(db.map(c=>c.date))].sort((a,b)=>b.localeCompare(a));
+    selectedDate=dates[0]||null;
+  }
+  renderAll();
+});
+function clearSearch(){document.getElementById('searchInput').value='';searchQuery='';document.getElementById('searchBanner').classList.remove('visible');renderAll();}
+
+/* RENDER */
+function renderAll(){renderSidebar();renderCards();renderDetail();}
+
+function renderSidebar(){
+  const list=document.getElementById('dateList');
+  const src=getResults();
+  const dates=[...new Set(src.map(c=>c.date))].sort((a,b)=>b.localeCompare(a));
+  if(!dates.length){list.innerHTML='<div style="padding:16px 14px;font-size:12px;color:var(--text3);">업무가 없습니다</div>';return;}
+  list.innerHTML=dates.map(d=>{
+    const cnt=src.filter(c=>c.date===d).length;
+    return '<div class="date-item'+(selectedDate===d?' active':'')+'" onclick="selectDate(\''+d+'\')">'
+      +'<span class="d-count">'+cnt+'</span>'
+      +'<span class="d-label">'+formatDateLabel(d)+'</span>'
+      +'<span class="d-sub">'+d+'</span></div>';
+  }).join('');
+}
+
+function selectDate(d){selectedDate=d;selectedCardId=null;renderAll();}
+
+function renderCards(){
+  const list=document.getElementById('cardList');
+  const t=document.getElementById('cardAreaTitle');
+  const s=document.getElementById('cardAreaSub');
+  if(!selectedDate){
+    t.textContent='날짜를 선택하세요';s.textContent='';
+    list.innerHTML='<div class="empty-cards"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="13" y2="13"/></svg>왼쪽에서 날짜를 선택하세요</div>';
+    return;
+  }
+  const cards=getResults().filter(c=>c.date===selectedDate).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+  t.textContent=formatDateLabel(selectedDate);
+  s.textContent=cards.length+'개 업무 · 완료 '+cards.filter(c=>c.done).length+'개';
+  if(!cards.length){list.innerHTML='<div class="empty-cards"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>'+(searchQuery?'검색 결과 없음':'업무가 없습니다')+'</div>';return;}
+  list.innerHTML=cards.map(c=>{
+    const cat=CATS[c.catId]||CATS[7];
+    const doneBadge=c.done?'<span class="done-badge" style="font-size:9px;padding:1px 6px;">✓ 완료</span>':'';
+    const preview=c.content?c.content.replace(/[#*`\[\]]/g,'').substring(0,60):'';
+    const plm=(c.tags||[]).includes('PLM')?'<span class="tag plm-tag">PLM</span>':'';
+    const basic=(c.tags||[]).includes('BASIC')?'<span class="tag basic-tag">BASIC</span>':'';
+    const custom=(c.tags||[]).filter(t=>t!=='PLM'&&t!=='BASIC').slice(0,2).map(t=>'<span class="tag">#'+t+'</span>').join('');
+    return '<div class="work-card'+(c.id===selectedCardId?' active':'')+(c.done?' done-card':'')+'" style="border-left-color:'+cat.color+'" onclick="selectCard(\''+c.id+'\')">'
+      +'<div class="cat-row"><span class="cat-badge" style="background:'+cat.bg+';color:'+cat.color+'">'+cat.name+'</span>'+doneBadge+'<span class="card-time">'+(c.sessionName||'')+'</span></div>'
+      +'<div class="card-title'+(c.done?' done-title':'')+'">'+hl(c.title)+'</div>'
+      +(preview?'<div class="card-preview">'+hl(preview)+'</div>':'')
+      +'<div class="card-tags"><span class="tag date-tag">#'+c.date+'</span>'+plm+basic+custom+'</div>'
+      +'</div>';
+  }).join('');
+}
+
+function selectCard(id){selectedCardId=id;renderCards();renderDetail();}
+
+function renderDetail(){
+  const head=document.getElementById('detailHead');
+  const body=document.getElementById('detailBody');
+  const empty=document.getElementById('detailEmpty');
+  if(!selectedCardId){head.classList.remove('visible');body.classList.remove('visible');empty.style.display='flex';return;}
+  const c=db.find(x=>x.id===selectedCardId);
+  if(!c) return;
+  const cat=CATS[c.catId]||CATS[7];
+  empty.style.display='none';head.classList.add('visible');body.classList.add('visible');
+
+  document.getElementById('detailCatBadge').textContent=cat.name;
+  document.getElementById('detailCatBadge').style.background=cat.bg;
+  document.getElementById('detailCatBadge').style.color=cat.color;
+  const db2=document.getElementById('detailDoneBadge');
+  db2.style.display=c.done?'inline-flex':'none';
+  document.getElementById('detailTitle').textContent=c.title;
+  document.getElementById('detailTitle').className='detail-title'+(c.done?' done-title':'');
+  document.getElementById('detailSession').textContent=c.sessionName?'· '+c.sessionName:'';
+
+  const btn=document.getElementById('doneToggleBtn');
+  if(c.done){btn.classList.add('done-active');btn.innerHTML='<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="2,9 6,13 14,4"/></svg> 완료 취소';}
+  else{btn.classList.remove('done-active');btn.innerHTML='<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="2,9 6,13 14,4"/></svg> 완료';}
+
+  const tagsHtml=(c.tags||[]).map(t=>{
+    if(t==='PLM') return '<span class="tag plm-tag">PLM</span>';
+    if(t==='BASIC') return '<span class="tag basic-tag">BASIC</span>';
+    return '<span class="tag">#'+t+'</span>';
+  }).join(' ');
+  document.getElementById('detailMeta').innerHTML='<span>'+c.date+' '+(c.createdAt||'')+'</span><span class="tag date-tag">#'+c.date+'</span>'+tagsHtml;
+
+  document.getElementById('mdContent').innerHTML=marked.parse(c.content||'*세부 내용 없음*');
+
+  const linked=(c.links||[]).map(lid=>db.find(x=>x.id===lid)).filter(Boolean);
+  const lsec=document.getElementById('linkedSection');
+  if(linked.length){
+    lsec.innerHTML='<div class="linked-section"><div class="linked-label">연결된 업무 ('+linked.length+')</div><div class="linked-list">'
+      +linked.map(lc=>{
+        const lcat=CATS[lc.catId]||CATS[7];
+        return '<div class="linked-card" onclick="jumpToCard(\''+lc.id+'\',\''+lc.date+'\')">'
+          +'<span class="linked-dot" style="background:'+lcat.color+'"></span>'
+          +'<span style="color:'+lcat.color+';font-size:10px;font-weight:600;">'+lcat.name+'</span>'
+          +(lc.done?'<span class="done-badge" style="font-size:9px;padding:1px 5px;">✓</span>':'')
+          +'<span>'+lc.title+'</span>'
+          +'<span style="color:var(--text3);font-size:10px;margin-left:auto;">'+lc.date+'</span></div>';
+      }).join('')+'</div></div>';
+  } else {lsec.innerHTML='';}
+}
+
+function jumpToCard(id,date){selectedDate=date;selectedCardId=id;renderAll();}
+
+function toggleDone(){
+  if(!selectedCardId) return;
+  const idx=db.findIndex(c=>c.id===selectedCardId);
+  if(idx!==-1) db[idx].done=!db[idx].done;
+  save();renderCards();renderDetail();
+}
+
+/* MODAL */
+function buildCatGrid(){
+  document.getElementById('catGrid').innerHTML=CATS.map(c=>
+    '<div class="cat-opt'+(modalSelCat===c.id?' selected':'')+'" '
+    +'style="'+(modalSelCat===c.id?'background:'+c.color+';border-color:'+c.color+';':'')+'" '
+    +'onclick="selCat('+c.id+')">'+c.name+'</div>'
+  ).join('');
+}
+function selCat(id){modalSelCat=id;buildCatGrid();}
+
+function buildPresetTags(){
+  document.getElementById('btnPLM').className='preset-tag-btn'+(modalPresetTags.includes('PLM')?' plm-sel':'');
+  document.getElementById('btnBASIC').className='preset-tag-btn'+(modalPresetTags.includes('BASIC')?' basic-sel':'');
+}
+function togglePresetTag(tag){
+  const i=modalPresetTags.indexOf(tag);
+  if(i===-1) modalPresetTags.push(tag); else modalPresetTags.splice(i,1);
+  buildPresetTags();
+}
+function addCustomTag(){
+  const inp=document.getElementById('fieldCustomTag');
+  const val=inp.value.trim().replace(/^#+/,'');
+  if(!val||val==='PLM'||val==='BASIC'||modalCustomTags.includes(val)) return;
+  modalCustomTags.push(val);inp.value='';renderChips();
+}
+function removeCustomTag(tag){modalCustomTags=modalCustomTags.filter(t=>t!==tag);renderChips();}
+function renderChips(){
+  document.getElementById('customTagsWrap').innerHTML=modalCustomTags.map(t=>
+    '<span class="custom-tag-chip">#'+t+'<span class="chip-del" onclick="removeCustomTag(\''+t+'\')">✕</span></span>'
+  ).join('');
+}
+function buildLinkList(excl){
+  const others=db.filter(c=>c.id!==excl);
+  const el=document.getElementById('linkListModal');
+  if(!others.length){el.innerHTML='<div style="font-size:12px;color:var(--text3);padding:8px;">연결 가능한 업무가 없습니다</div>';return;}
+  el.innerHTML=others.map(c=>{
+    const cat=CATS[c.catId]||CATS[7];const isSel=modalSelLinks.includes(c.id);
+    return '<div class="link-opt'+(isSel?' selected':'')+'" onclick="toggleLink(\''+c.id+'\',this)">'
+      +'<input type="checkbox" '+(isSel?'checked':'')+' onclick="event.stopPropagation()"/>'
+      +'<span class="linked-dot" style="background:'+cat.color+'"></span>'
+      +'<span style="color:'+cat.color+';font-size:10px;font-weight:600;">'+cat.name+'</span>'
+      +(c.done?'<span class="done-badge" style="font-size:9px;padding:1px 5px;">✓</span>':'')
+      +'<span>'+c.title+'</span>'
+      +'<span style="color:var(--text3);font-size:10px;margin-left:auto;">'+c.date+'</span></div>';
+  }).join('');
+}
+function toggleLink(id,el){
+  const i=modalSelLinks.indexOf(id);
+  if(i===-1){modalSelLinks.push(id);el.classList.add('selected');el.querySelector('input').checked=true;}
+  else{modalSelLinks.splice(i,1);el.classList.remove('selected');el.querySelector('input').checked=false;}
+}
+
+function openNewCard(){
+  editingId=null;modalSelCat=0;modalSelLinks=[];modalPresetTags=[];modalCustomTags=[];
+  document.getElementById('modalTitle').textContent='새 업무 추가';
+  document.getElementById('fieldTitle').value='';
+  document.getElementById('fieldContent').value='';
+  document.getElementById('fieldCustomTag').value='';
+  document.getElementById('fieldSession').value='';
+  buildCatGrid();buildPresetTags();renderChips();buildLinkList(null);
+  document.getElementById('overlay').classList.add('open');
+}
+function editCurrent(){
+  if(!selectedCardId) return;
+  const c=db.find(x=>x.id===selectedCardId);if(!c) return;
+  editingId=c.id;modalSelCat=c.catId;modalSelLinks=[...(c.links||[])];
+  const allTags=c.tags||[];
+  modalPresetTags=allTags.filter(t=>t==='PLM'||t==='BASIC');
+  modalCustomTags=allTags.filter(t=>t!=='PLM'&&t!=='BASIC');
+  document.getElementById('modalTitle').textContent='업무 수정';
+  document.getElementById('fieldTitle').value=c.title;
+  document.getElementById('fieldContent').value=c.content||'';
+  document.getElementById('fieldCustomTag').value='';
+  document.getElementById('fieldSession').value=c.sessionName||'';
+  buildCatGrid();buildPresetTags();renderChips();buildLinkList(c.id);
+  document.getElementById('overlay').classList.add('open');
+}
+function saveCard(){
+  const title=document.getElementById('fieldTitle').value.trim();
+  if(!title){document.getElementById('fieldTitle').focus();return;}
+  const content=document.getElementById('fieldContent').value;
+  const sessionName=document.getElementById('fieldSession').value.trim();
+  const tags=[...modalPresetTags,...modalCustomTags];
+  if(editingId){
+    const i=db.findIndex(c=>c.id===editingId);
+    if(i!==-1) db[i]={...db[i],title,content,catId:modalSelCat,tags,sessionName,links:modalSelLinks,updatedAt:nowTimeStr()};
+  } else {
+    const nc={id:'c'+Date.now(),date:selectedDate||todayStr(),title,content,catId:modalSelCat,tags,sessionName,links:modalSelLinks,createdAt:nowTimeStr(),done:false};
+    db.unshift(nc);
+    if(!selectedDate) selectedDate=nc.date;
+    selectedCardId=nc.id;
+  }
+  save();closeModal();renderAll();
+}
+function deleteCurrent(){
+  if(!selectedCardId||!confirm('이 업무를 삭제할까요?')) return;
+  db=db.filter(c=>c.id!==selectedCardId).map(c=>({...c,links:(c.links||[]).filter(l=>l!==selectedCardId)}));
+  selectedCardId=null;save();renderAll();
+}
+function closeModal(){document.getElementById('overlay').classList.remove('open');}
+function closeModalOutside(e){if(e.target===document.getElementById('overlay')) closeModal();}
+
+/* SEED */
+function seedData(){
+  if(db.length) return;
+  const today=todayStr();
+  const[y,m,d]=today.split('-');
+  const yd=new Date(+y,+m-1,+d-1);
+  const yds=yd.getFullYear()+'-'+String(yd.getMonth()+1).padStart(2,'0')+'-'+String(yd.getDate()).padStart(2,'0');
+  db=[
+    {id:'c1',date:today,title:'신규 탭 관리 UI 검토',catId:0,content:'## 검토 항목\n\n- 탭 상태 저장 로직 개선\n- 탭 그룹 기능 추가 여부\n\n> 크롬 익스텐션 API 변경사항 확인 필요',tags:['PLM'],sessionName:'오전세션',links:['c3'],createdAt:'09:30',done:false},
+    {id:'c2',date:today,title:'Q2 일정 조율 및 마일스톤 작성',catId:1,content:'## Q2 목표\n\n1. 4월: 베타 출시\n2. 5월: 피드백 반영\n3. 6월: 정식 릴리즈\n\n**마감**: 이번 주 금요일',tags:['PLM','BASIC'],sessionName:'오전세션',links:[],createdAt:'10:15',done:false},
+    {id:'c3',date:today,title:'멤버 권한 체계 설계',catId:2,content:'## 권한 레벨\n\n| 레벨 | 역할 | 권한 |\n|------|------|------|\n| 1 | Viewer | 읽기 |\n| 2 | Editor | 쓰기 |\n| 3 | Admin | 전체 |',tags:['BASIC'],sessionName:'오후세션',links:[],createdAt:'14:00',done:true},
+    {id:'c4',date:today,title:'S3 버킷 비용 최적화',catId:3,content:'## 조치 사항\n\n- Lifecycle 정책 설정\n- 미사용 스냅샷 정리\n- 리전별 트래픽 재검토',tags:['PLM','인프라'],sessionName:'오후세션',links:['c1'],createdAt:'15:30',done:false},
+    {id:'c5',date:yds,title:'검색 필터 알고리즘 개선',catId:6,content:'## 개선 방향\n\n- 형태소 분석 도입 검토\n- 동의어 사전 구축\n- 검색 응답 속도 200ms 이내',tags:['BASIC','성능'],sessionName:'야근',createdAt:'22:10',done:true,links:[]},
+    {id:'c6',date:yds,title:'계정 연동 OAuth 오류 수정',catId:5,content:'## 이슈\n\n소셜 로그인 시 콜백 URL 오류\n\n### 원인\n`REDIRECT_URI` 환경변수 누락\n\n### 해결\n프로덕션 환경변수 추가 후 재배포 완료',tags:['PLM','긴급'],sessionName:'오전세션',createdAt:'11:00',done:false,links:[]},
+  ];
+  save();
+}
+
+seedData();
+const initDates=[...new Set(db.map(c=>c.date))].sort((a,b)=>b.localeCompare(a));
+if(initDates.length) selectedDate=initDates[0];
+renderAll();
+</script>
+</body>
+</html>
