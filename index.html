@@ -428,6 +428,10 @@ textarea.field-input{resize:vertical;min-height:190px;font-family:'IBM Plex Mono
         <div class="cat-grid" id="catGrid"></div>
       </div>
       <div>
+        <div class="field-label">날짜</div>
+        <input type="date" class="field-input" id="fieldDate" style="font-family:'IBM Plex Mono',monospace;font-size:14px;cursor:pointer;"/>
+      </div>
+      <div>
         <div class="field-label">제목</div>
         <input type="text" class="field-input" id="fieldTitle" placeholder="업무 제목 입력..."/>
       </div>
@@ -774,6 +778,7 @@ window.toggleLink = function(id, el) {
 window.openNewCard = function() {
   editingId=null; modalSelCat=0; modalSelLinks=[]; modalPresetTags=[]; modalCustomTags=[];
   document.getElementById('modalTitle').textContent = '새 업무 추가';
+  document.getElementById('fieldDate').value = todayStr();
   document.getElementById('fieldTitle').value = '';
   document.getElementById('fieldContent').value = '';
   document.getElementById('fieldCustomTag').value = '';
@@ -790,6 +795,7 @@ window.editCurrent = function() {
   modalPresetTags = allTags.filter(t=>t==='PLM'||t==='BASIC');
   modalCustomTags = allTags.filter(t=>t!=='PLM'&&t!=='BASIC');
   document.getElementById('modalTitle').textContent = '업무 수정';
+  document.getElementById('fieldDate').value = c.date || todayStr();
   document.getElementById('fieldTitle').value = c.title;
   document.getElementById('fieldContent').value = c.content||'';
   document.getElementById('fieldCustomTag').value = '';
@@ -804,16 +810,18 @@ window.saveCard = async function() {
   const content     = document.getElementById('fieldContent').value;
   const sessionName = document.getElementById('fieldSession').value.trim();
   const tags        = [...modalPresetTags, ...modalCustomTags];
+  const dateVal     = document.getElementById('fieldDate').value || todayStr();
   setSyncStatus('syncing');
   if (editingId) {
-    await updateDoc(doc(db,'worklog',editingId), { title, content, catId:modalSelCat, tags, sessionName, links:modalSelLinks });
+    await updateDoc(doc(db,'worklog',editingId), { title, content, catId:modalSelCat, tags, sessionName, links:modalSelLinks, date:dateVal });
+    // 날짜가 바뀌었으면 사이드바 선택도 이동
+    selectedDate = dateVal;
   } else {
-    const newDate = selectedDate || todayStr();
     const docRef = await addDoc(collection(db,'worklog'), {
-      date:newDate, title, content, catId:modalSelCat, tags, sessionName,
+      date:dateVal, title, content, catId:modalSelCat, tags, sessionName,
       links:modalSelLinks, done:false, timeStr:nowTimeStr(), createdAt:serverTimestamp()
     });
-    selectedDate = newDate;
+    selectedDate = dateVal;
     selectedCardId = docRef.id;
   }
   closeModal();
