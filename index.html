@@ -295,12 +295,79 @@ textarea.field-input{resize:vertical;min-height:190px;font-family:'IBM Plex Mono
 .btn-cancel:hover{background:var(--bg);color:var(--text);}
 
 .empty-cards{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text3);font-size:14px;gap:10px;padding:20px;text-align:center;}
+
+/* ── LOGIN SCREEN ── */
+.login-screen{
+  display:none;position:fixed;inset:0;background:var(--bg);z-index:300;
+  align-items:center;justify-content:center;
+}
+.login-screen.visible{display:flex;}
+.login-card{
+  background:var(--bg2);border:1.5px solid var(--border);border-radius:16px;
+  padding:40px 40px 36px;width:400px;max-width:calc(100vw - 32px);
+  box-shadow:var(--shadow-md);
+}
+.login-logo{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;color:var(--text);text-align:center;margin-bottom:6px;}
+.login-logo span{color:var(--accent);}
+.login-sub{font-size:14px;color:var(--text3);text-align:center;margin-bottom:32px;}
+.login-field{margin-bottom:16px;}
+.login-field label{display:block;font-size:12px;font-weight:600;color:var(--text2);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;}
+.login-field input{
+  width:100%;height:44px;background:var(--bg3);border:1.5px solid var(--border);
+  border-radius:var(--radius);color:var(--text);font-family:'IBM Plex Sans KR',sans-serif;
+  font-size:15px;padding:0 14px;outline:none;transition:border-color .15s,box-shadow .15s;
+}
+.login-field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,111,240,.12);background:var(--bg2);}
+.login-field input::placeholder{color:var(--text3);}
+.login-btn{
+  width:100%;height:46px;background:var(--accent);color:#fff;border:none;
+  border-radius:var(--radius);font-family:'IBM Plex Sans KR',sans-serif;font-size:15px;
+  font-weight:600;cursor:pointer;margin-top:8px;transition:opacity .15s;
+  box-shadow:0 2px 8px rgba(59,111,240,.3);
+}
+.login-btn:hover{opacity:.9;}
+.login-btn:disabled{opacity:.6;cursor:not-allowed;}
+.login-error{
+  display:none;margin-top:14px;padding:10px 14px;background:#fee2e2;border:1px solid rgba(220,38,38,.2);
+  border-radius:8px;font-size:13px;color:#dc2626;text-align:center;
+}
+.login-error.visible{display:block;}
+
+/* 로그아웃 버튼 */
+.logout-btn{
+  height:32px;padding:0 14px;background:var(--bg3);border:1.5px solid var(--border2);
+  border-radius:8px;color:var(--text2);font-size:13px;font-weight:500;cursor:pointer;
+  font-family:'IBM Plex Sans KR',sans-serif;display:flex;align-items:center;gap:6px;
+  transition:all .15s;white-space:nowrap;
+}
+.logout-btn:hover{background:#fee2e2;border-color:rgba(220,38,38,.3);color:#dc2626;}
+.user-info{font-size:12px;color:var(--text3);white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;}
 </style>
 </head>
 <body>
 
+<!-- LOGIN SCREEN -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">Work<span>Log</span></div>
+    <div class="login-sub">업무 관리 시스템에 로그인하세요</div>
+    <div class="login-field">
+      <label>이메일</label>
+      <input type="email" id="loginEmail" placeholder="이메일 주소 입력..."
+        onkeydown="if(event.key==='Enter') document.getElementById('loginPassword').focus()"/>
+    </div>
+    <div class="login-field">
+      <label>비밀번호</label>
+      <input type="password" id="loginPassword" placeholder="비밀번호 입력..."
+        onkeydown="if(event.key==='Enter') doLogin()"/>
+    </div>
+    <button class="login-btn" id="loginBtn" onclick="doLogin()">로그인</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
 <!-- LOADING -->
-<div class="loading-overlay" id="loadingOverlay">
+<div class="loading-overlay hidden" id="loadingOverlay">
   <div class="spinner"></div>
   <div class="loading-text">Firebase 연결 중...</div>
 </div>
@@ -318,6 +385,13 @@ textarea.field-input{resize:vertical;min-height:190px;font-family:'IBM Plex Mono
     <div class="sync-dot" id="syncDot"></div>
     <span id="syncText">연결 중</span>
   </div>
+  <div class="user-info" id="userInfo"></div>
+  <button class="logout-btn" id="logoutBtn" style="display:none" onclick="doLogout()">
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+      <path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h3M10 11l3-3-3-3M13 8H6"/>
+    </svg>
+    로그아웃
+  </button>
   <button class="new-btn" onclick="openNewCard()">
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
       <line x1="8" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="14" y2="8"/>
@@ -474,6 +548,7 @@ textarea.field-input{resize:vertical;min-height:190px;font-family:'IBM Plex Mono
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { marked } from "https://cdn.jsdelivr.net/npm/marked/src/marked.js";
 
 const firebaseConfig = {
@@ -485,8 +560,84 @@ const firebaseConfig = {
   appId: "1:15825130749:web:b792c8076d8a2a0cc95a94"
 };
 
-const app = initializeApp(firebaseConfig);
-const db  = getFirestore(app);
+const app  = initializeApp(firebaseConfig);
+const db   = getFirestore(app);
+const auth = getAuth(app);
+
+// ── AUTH ──
+let firestoreUnsub = null;
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    // 로그인 상태
+    document.getElementById('loginScreen').classList.remove('visible');
+    document.getElementById('loadingOverlay').classList.remove('hidden');
+    document.getElementById('userInfo').textContent = user.email;
+    document.getElementById('logoutBtn').style.display = 'flex';
+    startFirestore();
+  } else {
+    // 로그아웃 상태
+    document.getElementById('loginScreen').classList.add('visible');
+    document.getElementById('loadingOverlay').classList.add('hidden');
+    document.getElementById('userInfo').textContent = '';
+    document.getElementById('logoutBtn').style.display = 'none';
+    if (firestoreUnsub) { firestoreUnsub(); firestoreUnsub = null; }
+    cards = [];
+    renderAll();
+  }
+});
+
+window.doLogin = async function() {
+  const email    = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const btn      = document.getElementById('loginBtn');
+  const errEl    = document.getElementById('loginError');
+  if (!email || !password) {
+    errEl.textContent = '이메일과 비밀번호를 입력해주세요.';
+    errEl.classList.add('visible'); return;
+  }
+  btn.disabled = true;
+  btn.textContent = '로그인 중...';
+  errEl.classList.remove('visible');
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    document.getElementById('loginPassword').value = '';
+  } catch(e) {
+    const msg = e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password' || e.code === 'auth/user-not-found'
+      ? '이메일 또는 비밀번호가 올바르지 않습니다.'
+      : '로그인 중 오류가 발생했습니다. 다시 시도해주세요.';
+    errEl.textContent = msg;
+    errEl.classList.add('visible');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '로그인';
+  }
+};
+
+window.doLogout = async function() {
+  if (!confirm('로그아웃 하시겠어요?')) return;
+  await signOut(auth);
+};
+
+function startFirestore() {
+  if (firestoreUnsub) firestoreUnsub();
+  const q = query(collection(db,'worklog'), orderBy('createdAt','desc'));
+  setSyncStatus('syncing');
+  firestoreUnsub = onSnapshot(q, (snapshot) => {
+    cards = snapshot.docs.map(d => ({...d.data(), firestoreId: d.id}));
+    document.getElementById('loadingOverlay').classList.add('hidden');
+    setSyncStatus('ok');
+    if (!selectedDate && cards.length) {
+      const dates = [...new Set(cards.map(c=>c.date))].sort((a,b)=>b.localeCompare(a));
+      selectedDate = dates[0];
+    }
+    renderAll();
+  }, (err) => {
+    console.error(err);
+    setSyncStatus('err');
+    document.getElementById('loadingOverlay').classList.add('hidden');
+  });
+}
 
 // ── SYNC STATUS ──
 function setSyncStatus(state) {
@@ -509,14 +660,14 @@ const CATS = [
 ];
 
 let cards = [];
-let selectedDate   = null;
-let selectedCardId = null;
-let editingId      = null;
-let modalSelCat    = 0;
-let modalSelLinks  = [];
+let selectedDate    = null;
+let selectedCardId  = null;
+let editingId       = null;
+let modalSelCat     = 0;
+let modalSelLinks   = [];
 let modalPresetTags = [];
 let modalCustomTags = [];
-let searchQuery    = '';
+let searchQuery     = '';
 
 // ── HELPERS ──
 function todayStr() {
@@ -538,26 +689,6 @@ function hl(text) {
   const re = new RegExp('('+searchQuery.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
   return String(text).replace(re,'<mark style="background:#fef08a;color:#1a1d23;border-radius:2px;padding:0 2px;">$1</mark>');
 }
-
-// ── FIRESTORE REALTIME LISTENER ──
-const q = query(collection(db,'worklog'), orderBy('createdAt','desc'));
-setSyncStatus('syncing');
-
-onSnapshot(q, (snapshot) => {
-  cards = snapshot.docs.map(d => ({...d.data(), firestoreId: d.id}));
-  document.getElementById('loadingOverlay').classList.add('hidden');
-  setSyncStatus('ok');
-  // auto-select latest date on first load
-  if (!selectedDate && cards.length) {
-    const dates = [...new Set(cards.map(c=>c.date))].sort((a,b)=>b.localeCompare(a));
-    selectedDate = dates[0];
-  }
-  renderAll();
-}, (err) => {
-  console.error(err);
-  setSyncStatus('err');
-  document.getElementById('loadingOverlay').classList.add('hidden');
-});
 
 // ── SEARCH ──
 function getResults() {
